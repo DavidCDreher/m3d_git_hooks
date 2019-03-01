@@ -1,0 +1,94 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+import sys
+import re
+from subprocess import check_output
+
+feature_branch_re = r"^[fF]eature/[a-zA-Z]{1,3}(\d+)_.*"
+legacy_feature_branch_re = r"^(\d+)_.*"
+
+# Get git comment char
+try:
+    comment_char = (
+        check_output("git config --get core.commentChar")
+        .strip()
+        .decode(encoding="UTF-8")
+    )
+except CalledProcessError as e:
+    if e.returncode == 1:
+        comment_char = "#"
+        print(
+            "No comment char configured, it is advised to configure core.commentChar to use # for issue numbers"
+        )
+    else:
+        raise
+
+
+def get_issue_num_by_branch():
+    branch_name = (
+        check_output(["git", "symbolic-ref", "--short", "HEAD"])
+        .strip()
+        .decode(encoding="UTF-8")
+    )
+    feature_match = re.match(feature_branch_re, branch_name)
+    if feature_branch_re:
+        return feature_match.group(1)
+    legacy_feature_match = re.match(legacy_feature_branch_re, branch_name)
+    if legacy_feature_branch_re:
+        text = (
+            legacy_feature_match.group(1)
+            + "\n\n"
+            + comment_char
+            + "You're using a legacy branch naming convention, consider adopting: "
+            + feature_branch_re
+        )
+        return text
+    print("Could not determine issue number by branch name")
+    return None
+
+
+def prepend_commit_msg(text):
+    """Prepend the commit message with `text`"""
+    message_file = sys.argv[1]
+    with open(message_file) as f:
+        contents = f.read()
+    with open(message_file, "w") as f:
+        # Don't append if it's already there
+        if not contents.startswith(text):
+            f.write(text)
+        f.write(contents)
+
+
+def valid_commit_header(text):
+    message_file = sys.argv[1]
+    with open(message_file) as f:
+        first_line = f.readline()
+    return first_line.startswith(text)
+
+
+if __name__ == "__main__":
+    # 1-3 arguments are passed to this hook, the file id, the source and commit-SHA1
+    if len(sys.argv) > 2:
+        # In case of merge or flag (-c, -t, -m)
+        # Second argument can be 'message', 'template', 'merge', 'squash' or 'commit'
+        if sys.argv[2] == "message":
+            issue_number = get_issue_num_by_branch()
+            header = "#" + issue_number + "\n"
+            if not valid_commit_header(header):
+                print(
+                    "The supplied commit message does not contain the correct issue number header.\n"
+                    + "Please make sure to reference TFS issue numbers and amend the commit message."
+                )
+        else:
+            pass
+    else:
+        # Fail silently
+        try:
+            issue_number = get_issue_num_by_branch()
+            if issue_number:
+                header = "#" + issue_number + "\n"
+                prepend_commit_msg(header)
+        except BaseException:
+            print("Error in preparing commit message, you're on your own")
+            pass
