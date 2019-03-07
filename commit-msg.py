@@ -6,12 +6,14 @@
 import sys
 import os
 import re
-from subprocess import call, check_output, CalledProcessError, PIPE
+from subprocess import call, check_output, CalledProcessError
 
 commit_msg_re = r"^(#\d+\s.*|[mM]erge\s.*)"
 issue_number_re = r"^#(\d+)\s.*"
 feature_branch_re = r"^[fF]eature/[a-zA-Z]{1,3}(\d+)_.*"
 legacy_feature_branch_re = r"^(\d+)_.*"
+
+git_verbose_header = " ------------------------ >8 ------------------------"
 
 if os.environ.get("EDITOR", "none") != "none":
     editor = os.environ["EDITOR"]
@@ -128,6 +130,10 @@ if __name__ == "__main__":
                 line_number = -1
                 for curr_line in commit_fd:
                     stripped_line = curr_line.strip()
+                    # Stop reading in case of verbose mode when encountering header
+                    if stripped_line.startswith(comment_char + git_verbose_header):
+                        break
+                    # Read only non-comment lines
                     if not stripped_line.startswith(comment_char):
                         line_number += 1
                         new_msg.append(curr_line)
