@@ -6,75 +6,37 @@
 import sys
 import os
 import re
-from subprocess import call, check_output, CalledProcessError
+from subprocess import call
 
-commit_msg_re = r"^(#\d+\s.*|[mM]erge\s.*)"
-issue_number_re = r"^#(\d+)\s.*"
-feature_branch_re = r"^[fF]eature/[a-zA-Z]{1,3}(\d+)_.*"
-legacy_feature_branch_re = r"^(\d+)_.*"
-
-git_verbose_header = " ------------------------ >8 ------------------------"
+import hook_utils
 
 if os.environ.get("EDITOR", "none") != "none":
     editor = os.environ["EDITOR"]
 else:
     editor = "vim"
 
-# Get git comment char
-try:
-    comment_char = (
-        check_output(["git", "config", "--get", "core.commentChar"])
-        .strip()
-        .decode(encoding="UTF-8")
-    )
-except CalledProcessError as e:
-    if e.returncode == 1:
-        comment_char = "#"
-        print(
-            "No comment char configured, it is advised to configure core.commentChar to use # for issue numbers"
-        )
-    else:
-        raise
 
-
-def get_issue_num_by_branch():
-    branch_name = (
-        check_output(["git", "symbolic-ref", "--short", "HEAD"])
-        .strip()
-        .decode(encoding="UTF-8")
-    )
-    feature_match = re.match(feature_branch_re, branch_name)
-    if feature_match:
-        return feature_match.group(1)
-    legacy_feature_match = re.match(legacy_feature_branch_re, branch_name)
-    if legacy_feature_match:
-        print(
-            "You're using a legacy branch naming convention, consider adopting: "
-            + feature_branch_re
-        )
-        return legacy_feature_match.group(1)
-    return None
-
-
-def check_format_first_line(line):
+def check_format_first_line(line, git_comment_char):
     error_msg = ""
-    if not re.match(commit_msg_re, line):
+    if not re.match(hook_utils.COMMIT_MSG_RE, line):
         msg = (
-            comment_char
-            + " Error: Subject line should start with a #(ISSUE) or with 'Merge'\n"
+                git_comment_char
+                + " Error: Subject line should start with a #(ISSUE) or with 'Merge'\n"
         )
         error_msg = error_msg + msg
-        issue_match = re.match(issue_number_re, line)
-        issue_branch_number = get_issue_num_by_branch()
+        issue_match = re.match(hook_utils.ISSUE_NUMBER_RE, line)
+        issue_branch_number, number_msg = hook_utils.get_issue_num_by_branch()
+        if number_msg:
+            error_msg += git_comment_char + number_msg
         if issue_match and issue_branch_number:
             if issue_match.group(1) != issue_branch_number:
                 msg = (
-                    comment_char
-                    + " Error: Mismatch between branch issue number and issue number in commit message\n"
+                        git_comment_char
+                        + " Error: Mismatch between branch issue number and issue number in commit message\n"
                 )
                 error_msg = error_msg + msg
     if len(line) > 50:
-        msg = comment_char + " Error: Limit the subject line to 50 characters"
+        msg = git_comment_char + " Error: Limit the subject line to 50 characters"
         error_msg = (
             error_msg
             + msg
@@ -88,26 +50,26 @@ def check_format_first_line(line):
     if first_word_match:
         first_word = first_word_match.group(1)
         if first_word[0].islower():
-            msg = comment_char + " Error: Capitalize the subject line\n"
+            msg = git_comment_char + " Error: Capitalize the subject line\n"
             error_msg = error_msg + msg
     else:
-        msg = comment_char + " Error: Subject line should include a summary\n"
+        msg = git_comment_char + " Error: Subject line should include a summary\n"
         error_msg = error_msg + msg
     if line and line[-1] == ".":
-        msg = comment_char + " Error: Do not end the subject line with a period\n"
+        msg = git_comment_char + " Error: Do not end the subject line with a period\n"
         error_msg = error_msg + msg
     return error_msg
 
 
-def check_format_rules(line_num, line):
+def check_format_rules(line_num, line, git_comment_char):
     if line_num == 0:
-        return check_format_first_line(line)
+        return check_format_first_line(line, git_comment_char)
     if line_num == 1:
         if line:
-            return comment_char + " Error: Second line ^ should be empty.\n"
-    if not line.startswith(comment_char):
+            return git_comment_char + " Error: Second line ^ should be empty.\n"
+    if not line.startswith(git_comment_char):
         if len(line) > 80:
-            err_msg = comment_char + " Error: No line should exceed 80 characters:"
+            err_msg = git_comment_char + " Error: No line should exceed 80 characters:"
             err_msg = (
                 err_msg
                 + (" " * (80 - 1 - len(err_msg)))
@@ -122,41 +84,38 @@ def check_format_rules(line_num, line):
 if __name__ == "__main__":
     message_file = sys.argv[1]
     try:
-
+        comment_char, comment_msg = hook_utils.get_git_comment_char()
         while True:
-            new_msg = list()
+            new_commit_msg = list()
             errors = False
             with open(message_file) as commit_fd:
                 line_number = -1
                 for curr_line in commit_fd:
                     stripped_line = curr_line.strip()
                     # Stop reading in case of verbose mode when encountering header
-                    if stripped_line.startswith(comment_char + git_verbose_header):
+                    if stripped_line.startswith(comment_char + hook_utils.GIT_VERBOSE_HEADER):
                         break
                     # Read only non-comment lines
                     if not stripped_line.startswith(comment_char):
                         line_number += 1
-                        new_msg.append(curr_line)
-                        e = check_format_rules(line_number, stripped_line)
+                        new_commit_msg.append(curr_line)
+                        e = check_format_rules(line_number, stripped_line, comment_char)
+                        if (line_number == 0) and comment_msg:
+                            e += comment_char + comment_msg
                         if e:
-                            new_msg.append(e)
+                            new_commit_msg.append(e)
                             errors = True
             if errors:
                 with open(message_file, "w") as commit_fd:
-                    for curr_line in new_msg:
+                    for curr_line in new_commit_msg:
                         commit_fd.write(curr_line)
                     commit_fd.write("\n")
-                re_edit = input(
-                    "Errors in commit message format. Abort, Edit, or Ignore?. [a/e/i] "
-                )
-                while re_edit not in ("a", "abort", "e", "edit", "i", "ignore"):
-                    re_edit = input(
-                        "Invalid choice '%s'.  Abort, Edit, or Ignore?. [a/e/i] "
-                        % (re_edit,)
-                    )
-                if re_edit.lower() in ("a", "abort"):
+                user_msg = "Errors in commit message format. "
+                user_options = ["Abort", "edit", "ignore"]
+                user_choice = hook_utils.ask_user_choice(user_msg, user_options)
+                if user_choice == "Abort":
                     sys.exit(1)
-                elif re_edit.lower() in ("i", "ignore"):
+                elif user_choice == "ignore":
                     sys.exit(0)
                 else:
                     call(["env", editor, message_file])

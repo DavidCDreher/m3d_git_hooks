@@ -1,16 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-from __future__ import print_function
 import sys
 from subprocess import check_output
 
-protected_branch = "master"
+import hook_utils
 
-# Compatibility for Python2/3 input methods:
-if sys.version_info >= (3, 0):
-    input_fcn = input
-else:
-    input_fcn = raw_input
+PROTECTED_BRANCH = "master"
 
 if __name__ == "__main__":
     branch_name = (
@@ -18,19 +13,14 @@ if __name__ == "__main__":
         .strip()
         .decode(encoding="UTF-8")
     )
-    if branch_name == protected_branch:
+    if branch_name == PROTECTED_BRANCH:
         try:
             # Needed for user input in git-hooks
             sys.stdin = open("/dev/tty")
-            re_edit = input_fcn(
-                "You're about to commit to master, is that what you intended? [y/n] "
-            )
-            while re_edit not in ("y", "yes", "n", "no"):
-                re_edit = input_fcn(
-                    "Invalid choice '%s'.  Yes, commit or no, abort?. [y/n] "
-                    % (re_edit,)
-                )
-            if re_edit.lower() in ("y", "yes"):
+            msg = "You're about to commit to master, is that what you intended?"
+            options = ["yes", "no", "abort"]
+            user_choice = hook_utils.ask_user_choice(msg, options)
+            if user_choice == "yes":
                 sys.exit(0)
             else:
                 sys.exit(1)
