@@ -17,7 +17,7 @@ GOOD_COMMIT_RULES = [
 ]
 
 
-def prepend_commit_msg(text):
+def prepend_commit_msg(text: str) -> None:
     """Prepend the commit message with `text`"""
     message_file = sys.argv[1]
     with open(message_file) as f:
@@ -29,7 +29,7 @@ def prepend_commit_msg(text):
         f.write(contents)
 
 
-def check_commit_header(text):
+def check_commit_header(text: str) -> str:
     message_file = sys.argv[1]
     with open(message_file) as f:
         first_line = f.readline()
@@ -92,9 +92,9 @@ if __name__ == "__main__":
                     header = "#" + issue_number + "\n"
             else:
                 # In case no issue number could be found prepend error messages
-                header = f"{comment_char} {number_msg}{comment_char}\n"
+                header = f"{comment_char} Error: {number_msg}{comment_char}\n"
             if comment_msg:
-                header += f"{comment_char} {comment_msg}{comment_char}\n"
+                header += f"{comment_char} Error: {comment_msg}{comment_char}\n"
             # Add good commit rules
             header += "\n".join(
                 f"{comment_char} {rule}" for rule in GOOD_COMMIT_RULES
