@@ -27,7 +27,7 @@ def check_format_first_line(line, git_comment_char):
         issue_match = re.match(hook_utils.ISSUE_NUMBER_RE, line)
         issue_branch_number, number_msg = hook_utils.get_issue_num_by_branch()
         if number_msg:
-            error_msg += git_comment_char + number_msg
+            error_msg += f"{git_comment_char} {number_msg}"
         if issue_match and issue_branch_number:
             if issue_match.group(1) != issue_branch_number:
                 msg = (
@@ -101,7 +101,7 @@ if __name__ == "__main__":
                         new_commit_msg.append(curr_line)
                         e = check_format_rules(line_number, stripped_line, comment_char)
                         if (line_number == 0) and comment_msg:
-                            e += comment_char + comment_msg
+                            e += f"{comment_char} {comment_msg}"
                         if e:
                             new_commit_msg.append(e)
                             errors = True
@@ -118,7 +118,7 @@ if __name__ == "__main__":
                 elif user_choice == "ignore":
                     sys.exit(0)
                 else:
-                    call(["env", editor, message_file])
+                    call([editor, message_file])
                     continue
             else:
                 sys.exit(0)

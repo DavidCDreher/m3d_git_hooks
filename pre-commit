@@ -16,11 +16,11 @@ if __name__ == "__main__":
     if branch_name == PROTECTED_BRANCH:
         try:
             # Needed for user input in git-hooks
-            sys.stdin = open("/dev/tty")
-            msg = "You're about to commit to master, is that what you intended?"
-            options = ["yes", "no", "abort"]
+            hook_utils.open_console_input()
+            msg = "You're about to commit to master, is that what you intended? "
+            options = ["Yes", "no", "abort"]
             user_choice = hook_utils.ask_user_choice(msg, options)
-            if user_choice == "yes":
+            if user_choice == "Yes":
                 sys.exit(0)
             else:
                 sys.exit(1)

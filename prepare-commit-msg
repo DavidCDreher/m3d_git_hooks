@@ -7,13 +7,13 @@ import hook_utils
 # Taken from: https://chris.beams.io/posts/git-commit/
 # Reordered for line length visibility at top
 GOOD_COMMIT_RULES = [
-    " 1: Limit the subject line to 50 characters: ~~~^",
-    " 2: Wrap the body at 72 characters: " + 34 * "~" + "^",
-    " 3: Separate subject from body with a blank line",
-    " 4: Capitalize the subject line",
-    " 5: Do not end the subject line with a period",
-    " 6: Use the imperative mood in the subject line",
-    " 7: Use the body to explain what and why vs. how",
+    "1: Limit the subject line to 50 characters: ~~~^",
+    "2: Wrap the body at 72 characters: " + 34 * "~" + "^",
+    "3: Separate subject from body with a blank line",
+    "4: Capitalize the subject line",
+    "5: Do not end the subject line with a period",
+    "6: Use the imperative mood in the subject line",
+    "7: Use the body to explain what and why vs. how",
 ]
 
 
@@ -66,7 +66,7 @@ if __name__ == "__main__":
             err_msg = "\n".join(filter(None, [number_msg, comment_msg, header_msg]))
             if err_msg:
                 # Needed for user input in git-hooks
-                sys.stdin = open("/dev/tty")
+                hook_utils.open_console_input()
                 options = ["continue", "abort"]
                 user_choice = hook_utils.ask_user_choice(
                     err_msg + "\n Do you want to ", options
@@ -82,27 +82,25 @@ if __name__ == "__main__":
         try:
             # Try to determine issue number and catch any messages
             issue_number, number_msg = hook_utils.get_issue_num_by_branch()
+            comment_char, comment_msg = hook_utils.get_git_comment_char()
+            # For a valid issue number prepend to commit message
             if issue_number:
-                # For a valid issue number prepend to commit message
-                comment_char, comment_msg = hook_utils.get_git_comment_char()
                 # Trick issue number reference in case the # is used for git comments
                 if comment_char == hook_utils.GIT_DEFAULT_COMMENT_CHAR:
                     header = " #" + issue_number + "\n"
                 else:
                     header = "#" + issue_number + "\n"
-                # Add good commit rules
-                header += "\n".join(
-                    f"{comment_char}{rule}" for rule in GOOD_COMMIT_RULES
-                )
-                # Add possible error message
-                err_msg = "\n".join(filter(None, [number_msg, comment_msg]))
-                if err_msg:
-                    prepend_commit_msg("\n".join([header, err_msg]))
-                else:
-                    prepend_commit_msg(header)
             else:
                 # In case no issue number could be found prepend error messages
-                prepend_commit_msg(number_msg)
+                header = f"{comment_char} {number_msg}{comment_char}\n"
+            if comment_msg:
+                header += f"{comment_char} {comment_msg}{comment_char}\n"
+            # Add good commit rules
+            header += "\n".join(
+                f"{comment_char} {rule}" for rule in GOOD_COMMIT_RULES
+            )
+            header += f"\n{comment_char}"
+            prepend_commit_msg(header)
         except Exception:
             print("Error in preparing commit message, you're on your own")
             pass

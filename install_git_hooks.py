@@ -34,9 +34,11 @@ def get_target_dir(target_dir: str) -> str:
     else:
         try:
             git_root = check_output(["git", "rev-parse", "--show-toplevel"])
+            git_root = git_root.decode(sys.stdout.encoding).rstrip()
         except CalledProcessError as exc:
             raise InstallException("Could not determine git root directory") from exc
         target_dir = os.path.join(git_root, hook_dir)
+        print(target_dir)
     if not os.path.isdir(target_dir):
         raise InstallException("Target directory does not contain a '.git' folder")
     return target_dir
