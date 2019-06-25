@@ -30,7 +30,8 @@ def get_target_dir(target_dir: str) -> str:
     hook_dir = os.path.join(".git", "hooks")
     if target_dir:
         # Remove any .git directories that were possibly given by the user
-        target_dir = os.path.join(target_dir.strip(hook_dir), hook_dir)
+        target_dir = os.path.join(target_dir.rstrip(hook_dir), hook_dir)
+        print(target_dir)
     else:
         try:
             git_root = check_output(["git", "rev-parse", "--show-toplevel"])
