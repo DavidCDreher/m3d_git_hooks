@@ -8,7 +8,7 @@ from typing import List, Tuple
 GIT_DEFAULT_COMMENT_CHAR = "#"
 GIT_VERBOSE_HEADER = " ------------------------ >8 ------------------------"
 
-FEATURE_BRANCH_RE = r"^[fF]eature/[a-zA-Z]{1,3}(\d+)_.*"
+FEATURE_BRANCH_RE = r"^[fF]eature/[a-zA-Z]{1,3}_?(\d+)_.*"
 PROTO_BRANCH_RE = r"^[pP]roto/[a-zA-Z]{1,3}(\d+)_.*"
 LEGACY_FEATURE_BRANCH_RE = r"^(\d+)_.*"
 ISSUE_NUMBER_RE = r"^\s?#(\d+)\s.*"
