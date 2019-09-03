@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.7
 """Install utility for M3D git hooks"""
 
 # stdlib

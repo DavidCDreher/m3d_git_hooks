@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
 # Check if python3 is installed
-if command -v python3 &>/dev/null
+if command -v python3.7 &>/dev/null
 then
   # We need this /dev/tty trick to repeatedly rerun the message check
   exec < /dev/tty
   .git/hooks/commit-msg.py $1
 else
-    echo "Python 3 is not installed"
+    echo "Python 3.7 is not installed"
 fi
