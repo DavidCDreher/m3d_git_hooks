@@ -7,6 +7,7 @@ import shutil
 import os
 import stat
 from subprocess import check_output, CalledProcessError
+from datetime import datetime
 
 # external
 import click
@@ -64,6 +65,7 @@ def chmod_plus_x(path):
 def install_hooks(target_dir: str) -> None:
     source_dir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
     target_dir = os.path.abspath(get_target_dir(target_dir))
+    now = datetime.now().replace(microsecond=0).isoformat()
     for file in HOOK_FILES:
         try:
             target_file = os.path.join(target_dir, file)
@@ -72,7 +74,7 @@ def install_hooks(target_dir: str) -> None:
                 print(
                     f"Backing existing git hook file [{file}] up to [{file + BACKUP_EXT}]"
                 )
-                shutil.move(target_file, target_file + BACKUP_EXT)
+                shutil.move(target_file, target_file + "_" + now + BACKUP_EXT)
             print(f"Installing git hook file [{file}]")
             shutil.copyfile(source_file, target_file)
             chmod_plus_x(target_file)
