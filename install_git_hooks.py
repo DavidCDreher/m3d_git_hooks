@@ -72,7 +72,8 @@ def install_hooks(target_dir: str) -> None:
             source_file = os.path.join(source_dir, file)
             if os.path.isfile(target_file):
                 print(
-                    f"Backing existing git hook file [{file}] up to [{file + BACKUP_EXT}]"
+                    f"Backing existing git hook file [{file}] "
+                    f"up to [{file + '_' + now + BACKUP_EXT}]"
                 )
                 shutil.move(target_file, target_file + "_" + now + BACKUP_EXT)
             print(f"Installing git hook file [{file}]")
